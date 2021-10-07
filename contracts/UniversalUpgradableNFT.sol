@@ -14,8 +14,11 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
     event isUpgradable(string message);
     event isMutabale(string message);
     event hasUpgraded(string message);
+    event hasStaked(string message);
+    event hasUnStaked(string message);
+    event moneyHasBeenAccepted(string message);
     //add events
-    constructor () {
+    constructor () payable{ //When the contract is first created, we need to send some ETH to it
         manager = msg.sender;
     }
     uint[4][4][] someArraYName;
@@ -69,21 +72,9 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
     function getTokensOfAnOwner(address _owner) public view returns(uint[4] memory) {
         return tokenOwners[_owner];
     }
-
-
-    //IMPORTANT NOTES
-    //Can only have a handluf of tokens, what number do you suggest?
-    //User can only have 1 token type (token type should be unique)
-    //User can only have  4 tokens
-    //An address can only lock his/her tokens in only one vault
-    //And it should be all or nothing locked
-
-    ////10 eth, 10%, 1 0,9 .... When a user wins a game we need to give him some ETH
-    //I suggested that we dont make it hardcode, like always 1 ETH
-    //but E.g. if there is like 10 ETH in a pool, than the winner takes 10% of it,
-    //so in the begining its first 10 ETH, the winner takes 1 ETH, than 9 are left, the
-    //winner takes 0.9 eth etc etc...
-    function CreateToken(TokenType _tokenType) public{//alsow user need to pay ETH in order to create a token
+    
+    function CreateToken(TokenType _tokenType) public  payable{//alsow user need to pay ETH in order to create a token
+        require(msg.value >= calculateEtherToSend(),'You need to send more ETH');
         require(tokenOwners[msg.sender][uint(_tokenType)] != 0,'You cant overwrite your token'); 
         tokens[tokenId].id = tokenId;
         tokens[tokenId].timestamp = block.timestamp;
@@ -94,9 +85,6 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
     function upgradeToken(uint _tokenToBeUpgradedId, uint _tokenToBeSacrificedId) public{
         require(tokens[_tokenToBeUpgradedId].owner == msg.sender && tokens[_tokenToBeSacrificedId].owner == msg.sender,'You are not the owner of these tokens');
         require(tokens[_tokenToBeUpgradedId].tokenLevel == tokens[_tokenToBeSacrificedId].tokenLevel);
-        //this isnt anymore necessery since all tokenes should be in the same vault
-        //a user cant have 1 token in vault 1 and the other in vault 2
-        // require(tokens[_tokenToBeUpgradedId].tokenVault == tokens[_tokenToBeSacrificedId].tokenVault); 
         removeTokenById(_tokenToBeSacrificedId);
         tokens[_tokenToBeUpgradedId].tokenLevel =TokenLevel(uint(tokens[_tokenToBeUpgradedId].tokenLevel) + 1);
         
@@ -111,38 +99,34 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
         }
     }
 
+    function calculateEtherToSend() internal view returns(uint minAmountToSend) {
+        minAmountToSend = address(this).balance/100; //the minimum amount is 1% of the contract balance
+    }
+
     function mutateToken(uint _tokenToBeUpgradedId, uint _tokenToBeSacrificedId,TokenType _designatedType) public {
         require(tokens[_tokenToBeUpgradedId].owner == msg.sender && tokens[_tokenToBeSacrificedId].owner ==msg.sender, 'You do not own these 2 tokens');
-        // require(tokens[_tokenToBeUpgradedId].tokenVault == tokens[_tokenToBeSacrificedId].tokenVault); See line 88
         require(TokenLevel(uint(tokens[_tokenToBeUpgradedId].tokenLevel))==TokenLevel(uint(tokens[_tokenToBeSacrificedId].tokenLevel) -1));
         require(tokenOwners[msg.sender][uint(_designatedType)] != 0,'You can only have one kind of token type');
         removeTokenById(_tokenToBeSacrificedId);
         tokens[_tokenToBeUpgradedId].tokenType = _designatedType;
     }
 
+     function giveWinnerProfit(address _winner) public payable {
+         require(msg.sender == manager,'Only the manager can awake this functionality');
+         uint amountToSend = (address(this).balance/100)*10;//we send 10% of contracts balance
+         payable(_winner).transfer(amountToSend);
+         
+     }
+
+     fallback() external payable{}
+     receive() external payable{}
+
         //This should be changed to a modifier and have the requremen statemnt from upgrade token
 //    function isUpgradable(uint _tokenId) public view {
-//        //Check if they are in the same vault and the same level
-//        require(tokens[_tokenId].owner == msg.sender);
-//        //just like the code in the modifier(at least the logic of it)
-//        for(uint i =0; i < tokenOwners[msg.sender].length-1;i++) {
-//            if(tokenOwners[msg.sender][i].tokenLevel == tokens[_tokenId].tokenData[_tokenId]tokenLevel && tokenOwners[msg.sender][i].tokenData[])
-//        }
-      
-//        if(tokens[_tokenId].tokenData[_tokenId].tokenLevel == tokens[_tokenId].tokenData[_tokenId].tokenLevel && tokens[_tokenId].tokenData[_tokenId].tokenVault == tokens[_tokenId].tokenData[_tokenId].tokenVault) {
-//            emit isUpgradable("It is upgradable");
-//        } else {
-//            emit isUpgradable("It is not upgradable")
-//        }
 //    }
 
      //This should be changed to a modifier and have the requremen statemnt from mutate token
-//    function isMutable(uint _tokenId) view public{
-//        //Check if they are in the same vault and that there is at least 1 token that is below 1 level
-//         require(tokens[_tokenId].owner == msg.sender);
-//         if(tokens[_tokenId].tokenData[_tokenToBeUpgradedId].tokenVault == tokens[_tokenToBeSacrificedId].tokenData[_tokenToBeSacrificedId].tokenVault && TokenLevel(uint(tokens[_tokenToBeUpgradedId].tokenData[_tokenToBeUpgradedId].tokenLevel)) == TokenLevel(uint(tokens[_tokenToBeSacrificedId].tokenData[_tokenToBeSacrificedId].tokenLevel) -1))
-//        //just like the code in the modifier(at least the logic of it)
-//    }
+//    function isMutable(uint _tokenId) view public{}
        function Disasamble(uint _tokenToBeDisasabledId) public {
            require(msg.sender == tokens[_tokenToBeDisasabledId].owner,'Only the owner can burn a token');
            removeTokenById(_tokenToBeDisasabledId);
@@ -167,7 +151,7 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
         }
 
         function updateToMax(uint _tokenToBeUpdatedId) public payable{
-            //pay some amount of ether (value cant be set as hardcode, i think it should be calc. using a function)
+            
             //require(msg.value == etherSend,'You need to pay x ETH in order to update to max');
             tokens[_tokenToBeUpdatedId].tokenLevel = TokenLevel.LevelThree; //(need to check if there is a way that gets the last value in a enum, and not
             //just hardcode it)
@@ -186,6 +170,6 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
         }
 
         function checkIfTokensAreStaked() public view returns(bool){
-            return lockedVaultTokens[msg.sender] == TokenVault.NoVault ? true: false;
+            return lockedVaultTokens[msg.sender] == TokenVault.NoVault;
         }
 }
