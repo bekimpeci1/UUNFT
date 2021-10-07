@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe 
 
-     address public manager;
+    address public manager;
     enum TokenType {Fire,Water}
     enum TokenLevel {LevelZero,LevelOne, LevelTwo, LevelThree}
     enum TokenVault {NoVault,TokenVaultOne, TokenVaultTwo} // Default NoVault
@@ -65,7 +65,8 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
         tokenId++;
     }
     function upgradeToken(uint _tokenToBeUpgradedId) public payable{
-       require(msg.value == calculateEtherToSend(10),'You need to send 10% of contract balance');
+        
+       require(msg.value >= calculateEtherToSend(10),'You need to send 10% of contract balance');
         tokens[_tokenToBeUpgradedId].tokenLevel =TokenLevel(uint(tokens[_tokenToBeUpgradedId].tokenLevel) + 1);
         
     }
@@ -78,13 +79,20 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
             }
         }
     }
+    
+    function balance() public view returns(uint){
+        return address(this).balance;
+    }
+    function getVault(address o) public view returns(TokenVault) {
+        return lockedVaultTokens[o];
+    }
 
     function calculateEtherToSend(uint percentage) internal view returns(uint minAmountToSend) {
         minAmountToSend = (address(this).balance/100)*percentage; //the minimum amount is 1% of the contract balance
     }
     function mutateToken(uint _tokenToBeUpgradedId,TokenType _designatedType) public payable{
         require(tokenOwners[msg.sender][uint(_designatedType)] == 0,'You can only have one kind of token type');
-        require(msg.value == calculateEtherToSend(15),'You need to send 10% of contract balance');
+        require(msg.value >= calculateEtherToSend(15),'You need to send 10% of contract balance');
         tokens[_tokenToBeUpgradedId].tokenType = _designatedType;
     }
 
@@ -114,13 +122,13 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
         }
 
         function updateToMax(uint _tokenToBeUpdatedId) public payable{
-            require(msg.value == calculateEtherToSend(20),'You need to pay 20% of the contract balance');
+            require(msg.value >= calculateEtherToSend(20),'You need to pay 20% of the contract balance');
             tokens[_tokenToBeUpdatedId].tokenLevel = TokenLevel.LevelThree;
         }
 
 
         function Stake(TokenVault _tokenVault) public {
-            require(lockedVaultTokens[msg.sender] == _tokenVault,'You can only stake your tokens in 1 valut at a time');
+            require(lockedVaultTokens[msg.sender] == TokenVault.NoVault,'You can only stake your tokens in 1 valut at a time');
             lockedVaultTokens[msg.sender] = _tokenVault;
         }
 
@@ -130,4 +138,5 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
             lockedVaultTokens[msg.sender] = TokenVault.NoVault;
         }
         
+      
 }
