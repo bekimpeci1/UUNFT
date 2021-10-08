@@ -92,7 +92,7 @@ contract UUNFT is ERC721("UpgradableNFT","UUNFT") { // also implement Ownalbe
     }
     function mutateToken(uint _tokenToBeUpgradedId,TokenType _designatedType) public payable{
         require(tokenOwners[msg.sender][uint(_designatedType)] == 0,'You can only have one kind of token type');
-        require(msg.value >= calculateEtherToSend(15),'You need to send 10% of contract balance');
+        require(msg.value >= calculateEtherToSend(15),'You need to send 15% of contract balance');
         tokens[_tokenToBeUpgradedId].tokenType = _designatedType;
     }
 
