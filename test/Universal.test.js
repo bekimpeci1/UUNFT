@@ -43,4 +43,5 @@ contract("UniversaUpgradableNFT",accounts => {
             assert.ok(true);
         }
     })
+    
 })
